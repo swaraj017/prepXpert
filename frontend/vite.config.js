@@ -1,24 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import path from 'path';
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(),tailwindcss()],
+import path from 'path'
+
+export default defineConfig(({ command }) => ({
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
+  server: command === 'serve' ? {
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // your backend
+        target: 'https://prepxpert-backend.onrender.com',
         changeOrigin: true,
         secure: false,
       },
     },
-    
-  },
-})
-
+  } : undefined,
+}))

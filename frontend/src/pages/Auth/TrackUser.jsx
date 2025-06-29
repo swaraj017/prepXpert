@@ -10,7 +10,7 @@ const TrackUser = () => {
       if (!user) return;
 
       try {
-        await axios.post('http://localhost:5000/api/users', {
+        await axios.post('https://prepxpert-backend.onrender.com/api/users', {
           name: user.fullName,
           email: user.primaryEmailAddress.emailAddress,
         });

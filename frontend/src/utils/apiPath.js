@@ -1,4 +1,4 @@
-export const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+export const BASE_URL = import.meta.env.VITE_BACKEND_URL || "https://prepxpert-backend.onrender.com/";
 
 export const API_PATH = {
   AI: {
