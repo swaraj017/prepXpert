@@ -1,4 +1,3 @@
-// src/pages/CreateSessionForm.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -21,6 +20,9 @@ const Input = ({ label, value, onChange, placeholder, type = "text" }) => (
 );
 
 const CreateSessionForm = () => {
+  const { getToken } = useAuth();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     role: '',
     experience: '',
@@ -30,7 +32,6 @@ const CreateSessionForm = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
 
   const handleChange = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -49,31 +50,54 @@ const CreateSessionForm = () => {
     setIsLoading(true);
 
     try {
-      // 1. Generate questions
-      const aiResponse = await axiosInstance.post(API_PATH.AI.GENERATE_QUESTIONS, {
-        role,
-        experience,
-        topicsToFocus: topicsToFocus.split(',').map((t) => t.trim()),
-        numberOfQues: 10,
-      });
+       
+      const token = await getToken();
+      if (!token) {
+        toast.error('Session expired. Please sign in again.');
+        return;
+      }
 
-
+       
+      const aiResponse = await axiosInstance.post(
+        API_PATH.AI.GENERATE_QUESTIONS,
+        {
+          role,
+          experience,
+          topicsToFocus: topicsToFocus.split(',').map((t) => t.trim()),
+          numberOfQues: 10,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       const generatedQuestions = aiResponse.data;
 
-      // 2. Create session
-      const response = await axiosInstance.post(API_PATH.SESSION.CREATE, {
-        ...formData,
-        questions: generatedQuestions,
-      });
+       
+      const response = await axiosInstance.post(
+        API_PATH.SESSION.CREATE,
+        {
+          ...formData,
+          questions: generatedQuestions,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (response.data?.session?._id) {
         toast.success('Session created!');
         navigate(`/interview-prep/${response.data.session._id}`);
+      } else {
+        throw new Error('Invalid session response');
       }
     } catch (err) {
-      console.error(err);
-      toast.error('Failed to create session.');
+      console.error('[CreateSessionForm] Error:', err);
+      toast.error(
+        err?.response?.data?.message ||
+        err.message ||
+        'Failed to create session.'
+      );
     } finally {
       setIsLoading(false);
     }

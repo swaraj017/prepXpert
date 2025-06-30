@@ -1,11 +1,20 @@
 const Session = require('../models/session');
 const Question = require('../models/Questions');
 
+ 
+
 exports.createSession = async (req, res) => {
   try {
+     
+    if (!req.auth || !req.auth.userId) {
+      console.warn('[CreateSession] Missing or invalid auth:', req.auth);
+      return res.status(401).json({ message: 'Unauthorized – please log in again' });
+    }
+
     const { role, experience, topicsToFocus, description, questions } = req.body;
     const userId = req.auth.userId;
 
+     
     const session = await Session.create({
       user: userId,
       role,
@@ -14,6 +23,7 @@ exports.createSession = async (req, res) => {
       description,
     });
 
+     
     const createdQuestions = await Promise.all(
       questions.map((q) =>
         Question.create({
@@ -24,18 +34,24 @@ exports.createSession = async (req, res) => {
       )
     );
 
+     
     session.questions = createdQuestions.map((q) => q._id);
     await session.save();
 
     res.status(201).json({ message: 'Session created', session });
   } catch (error) {
-    console.error('Create session error:', error.message);
+    console.error('[CreateSession] Server error:', error);
     res.status(500).json({ message: 'Could not create session' });
   }
 };
 
+
 exports.getMySessions = async (req, res) => {
   try {
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({ message: 'Unauthorized – please log in again' });
+    }
+
     const sessions = await Session.find({ user: req.auth.userId }).sort({ createdAt: -1 });
     res.status(200).json(sessions);
   } catch (error) {
@@ -65,6 +81,10 @@ exports.getSessionById = async (req, res) => {
 
 exports.deleteSession = async (req, res) => {
   try {
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({ message: 'Unauthorized – please log in again' });
+    }
+
     const session = await Session.findByIdAndDelete(req.params.id);
 
     if (!session) {
