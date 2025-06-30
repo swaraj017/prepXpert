@@ -54,7 +54,7 @@ const LandingPage = () => {
           </p>
 
            
-          <SignInButton mode='modal' afterSignInUrl='/dashboard'>
+          <SignInButton mode='modal' fallbackRedirectUrl='/dashboard'>
             <button
               className='bg-gray-900 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-full font-bold text-sm sm:text-base shadow-lg transform hover:scale-105 transition-all duration-300'
             >

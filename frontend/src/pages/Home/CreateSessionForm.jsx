@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATH } from '../../utils/apiPath';
@@ -8,7 +7,7 @@ import SpinnerLoad from '../../components/Loaders/SpinnerLoad';
 
 const Input = ({ label, value, onChange, placeholder, type = "text" }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-sm font-medium text-gray-700">{label}</label>
+    <label className="text-base font-medium text-gray-800">{label}</label>
     <input
       className="border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400"
       value={value}
@@ -19,8 +18,7 @@ const Input = ({ label, value, onChange, placeholder, type = "text" }) => (
   </div>
 );
 
-const CreateSessionForm = () => {
-  const { getToken } = useAuth();
+const CreateSessionForm = ({ token, onSuccess }) => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -46,18 +44,15 @@ const CreateSessionForm = () => {
       return;
     }
 
+    if (!token) {
+      toast.error('⚠️ Your session has expired due to inactivity. Please sign in again.');
+      return;
+    }
+
     setError(null);
     setIsLoading(true);
 
     try {
-       
-      const token = await getToken();
-      if (!token) {
-        toast.error('Session expired. Please sign in again.');
-        return;
-      }
-
-       
       const aiResponse = await axiosInstance.post(
         API_PATH.AI.GENERATE_QUESTIONS,
         {
@@ -73,7 +68,6 @@ const CreateSessionForm = () => {
 
       const generatedQuestions = aiResponse.data;
 
-       
       const response = await axiosInstance.post(
         API_PATH.SESSION.CREATE,
         {
@@ -86,8 +80,9 @@ const CreateSessionForm = () => {
       );
 
       if (response.data?.session?._id) {
-        toast.success('Session created!');
+        toast.success('🎉 Session created successfully!');
         navigate(`/interview-prep/${response.data.session._id}`);
+        onSuccess?.();
       } else {
         throw new Error('Invalid session response');
       }
@@ -96,12 +91,22 @@ const CreateSessionForm = () => {
       toast.error(
         err?.response?.data?.message ||
         err.message ||
-        'Failed to create session.'
+        'Failed to create session. Please try again.'
       );
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      toast('⏳ You’ve been inactive for a while. Submit soon to avoid token expiry.', {
+        icon: '⏰',
+      });
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => clearTimeout(timeout);
+  }, []);
 
   return (
     <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-10">
@@ -139,7 +144,7 @@ const CreateSessionForm = () => {
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
 
-        <div className="flex justify-end">
+        <div className="flex justify-end flex-col items-end gap-2">
           <button
             type="submit"
             disabled={isLoading}
@@ -148,6 +153,9 @@ const CreateSessionForm = () => {
             {isLoading && <SpinnerLoad />}
             Create Session
           </button>
+          <p className="text-m text-gray-500 italic">
+            ⚠️ Note: Please complete and submit in a timely manner.
+          </p>
         </div>
       </form>
     </div>
